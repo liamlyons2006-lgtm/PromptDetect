@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Prompt Injection Detector</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="stylesheet" href="/static/styles.css" />
+</head>
+<body>
+
+  <!-- ===== HEADER ===== -->
+  <header class="app-header" role="banner">
+    <div class="header-inner">
+      <div class="header-brand">
+        <div class="header-icon" aria-hidden="true">🛡️</div>
+        <div>
+          <h1 class="header-title">Prompt Injection Detector</h1>
+          <p class="header-subtitle">Real-time LLM security analysis dashboard</p>
+        </div>
+      </div>
+      <div class="header-right">
+        <div class="header-status" id="connection-status" aria-live="polite">
+          <span class="status-dot" id="status-dot"></span>
+          <span id="status-text">Connecting…</span>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <main class="app-main" role="main">
+
+    <!-- ===== SUMMARY CARDS ===== -->
+    <section class="summary-section" aria-label="Analysis summary">
+      <div class="summary-cards">
+
+        <div class="summary-card summary-card--total" role="region" aria-label="Total prompts analysed">
+          <div class="card-label">Total Analysed</div>
+          <div class="card-value" id="count-total">0</div>
+          <div class="card-meta">prompts processed</div>
+        </div>
+
+        <div class="summary-card summary-card--safe" role="region" aria-label="Safe prompts">
+          <div class="card-label">Safe</div>
+          <div class="card-value" id="count-safe">0</div>
+          <div class="card-meta">no threats detected</div>
+        </div>
+
+        <div class="summary-card summary-card--malicious" role="region" aria-label="Malicious prompts">
+          <div class="card-label">Malicious</div>
+          <div class="card-value" id="count-malicious">0</div>
+          <div class="card-meta">injection attacks blocked</div>
+        </div>
+
+        <div class="summary-card summary-card--chart" role="region" aria-label="Safe vs malicious chart">
+          <canvas id="ratio-chart" width="110" height="110" aria-label="Donut chart: safe vs malicious ratio"></canvas>
+          <div class="chart-legend" id="chart-legend" aria-hidden="true"></div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- ===== TWO-COLUMN LAYOUT ===== -->
+    <div class="content-grid">
+
+      <!-- LEFT: Controls -->
+      <aside class="left-panel" aria-label="Demo controls">
+
+        <!-- Prompt input -->
+        <section class="panel-section" aria-labelledby="custom-prompt-heading">
+          <h2 id="custom-prompt-heading" class="section-title">
+            <span class="section-title-dot" aria-hidden="true"></span>
+            Analyse a Prompt
+          </h2>
+          <form id="analyze-form" novalidate>
+            <div class="input-wrapper">
+              <label for="prompt-input" class="sr-only">Enter a prompt to analyse</label>
+              <textarea
+                id="prompt-input"
+                class="prompt-textarea"
+                rows="4"
+                placeholder="Enter any prompt to analyse for injection attacks…"
+                maxlength="10000"
+                aria-describedby="char-count prompt-error"
+              ></textarea>
+              <div class="textarea-footer">
+                <span id="char-count" class="char-count" aria-live="polite">0 / 10,000</span>
+              </div>
+            </div>
+            <p id="prompt-error" class="form-error" role="alert" aria-live="assertive" hidden></p>
+            <button type="submit" class="btn btn--primary" id="submit-btn">
+              <span class="btn-text">Analyse</span>
+              <span class="btn-spinner" aria-hidden="true" hidden></span>
+            </button>
+          </form>
+        </section>
+
+        <!-- Demo actions -->
+        <section class="panel-section demo-actions" aria-labelledby="demo-actions-heading">
+          <h2 id="demo-actions-heading" class="section-title">
+            <span class="section-title-dot" aria-hidden="true"></span>
+            Demo Actions
+          </h2>
+          <div class="demo-btn-group">
+            <button class="btn btn--demo" id="run-full-demo-btn">
+              ▶&nbsp; Run Full Demo
+            </button>
+            <button class="btn btn--demo-all" id="run-all-scenarios-btn">
+              ▶▶&nbsp; Run All Scenarios
+            </button>
+          </div>
+          <div class="demo-progress" id="demo-progress" hidden aria-live="polite">
+            <div class="progress-bar-track" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100" id="demo-progress-bar-track">
+              <div class="progress-bar-fill" id="demo-progress-bar-fill"></div>
+            </div>
+            <span id="demo-progress-text" class="progress-text"></span>
+          </div>
+        </section>
+
+        <!-- Scenario panel -->
+        <section class="panel-section scenarios-section" aria-labelledby="scenarios-heading">
+          <h2 id="scenarios-heading" class="section-title">
+            <span class="section-title-dot" aria-hidden="true"></span>
+            Threat Scenarios
+          </h2>
+          <div id="scenarios-container" aria-label="Demo scenarios list">
+            <p class="placeholder-text" id="scenarios-loading">Loading scenarios…</p>
+          </div>
+        </section>
+
+      </aside>
+
+      <!-- RIGHT: Results -->
+      <section class="right-panel" aria-labelledby="results-heading">
+        <h2 id="results-heading" class="section-title">
+          <span class="section-title-dot" aria-hidden="true"></span>
+          Analysis Results
+          <span class="results-count" id="results-count" aria-live="polite"></span>
+        </h2>
+
+        <div class="analyzing-indicator" id="analyzing-indicator" hidden role="status" aria-live="polite">
+          <span class="spinner" aria-hidden="true"></span>
+          Analysing prompt…
+        </div>
+
+        <div id="results-list" role="list" aria-label="Prompt analysis results">
+          <div class="results-placeholder" id="results-placeholder">
+            <div class="placeholder-icon" aria-hidden="true">🔍</div>
+            <p>No prompts analysed yet.</p>
+            <p class="placeholder-text">Submit a prompt above or click a scenario to begin.</p>
+          </div>
+        </div>
+      </section>
+
+    </div>
+  </main>
+
+  <!-- Tooltip -->
+  <div id="global-tooltip" class="global-tooltip" role="tooltip" aria-hidden="true"></div>
+
+  <script src="/static/app.js"></script>
+</body>
+</html>
